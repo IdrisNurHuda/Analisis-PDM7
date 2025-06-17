@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prediksi Kelulusan Siswa</title>
+    <!-- Memuat Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+    <div class="w-full max-w-lg bg-white p-8 rounded-xl shadow-lg">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-2">🎓 Prediksi Kelulusan Siswa</h1>
+        <p class="text-center text-gray-500 mb-8">Masukkan data siswa untuk memprediksi status kelulusan.</p>
+
+        <!-- Formulir Input -->
+        <form action="/" method="post" class="space-y-6">
+            <!-- Input Gender -->
+            <div>
+                <label for="gender" class="block text-sm font-medium text-gray-700 mb-1">Gender</label>
+                <select id="gender" name="gender" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm">
+                    <option value="0">Female</option>
+                    <option value="1">Male</option>
+                </select>
+            </div>
+
+            <!-- Input Race/Ethnicity -->
+            <div>
+                <label for="race_ethnicity" class="block text-sm font-medium text-gray-700 mb-1">Ras/Etnis</label>
+                <select id="race_ethnicity" name="race_ethnicity" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm">
+                    <option value="0">Group A</option>
+                    <option value="1">Group B</option>
+                    <option value="2">Group C</option>
+                    <option value="3">Group D</option>
+                    <option value="4">Group E</option>
+                </select>
+            </div>
+
+            <!-- Input Lunch -->
+            <div>
+                <label for="lunch" class="block text-sm font-medium text-gray-700 mb-1">Makan Siang</label>
+                <select id="lunch" name="lunch" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm">
+                    <option value="0">Standard</option>
+                    <option value="1">Free/Reduced</option>
+                </select>
+            </div>
+
+            <!-- Input Test Preparation Course -->
+            <div>
+                <label for="test_preparation_course" class="block text-sm font-medium text-gray-700 mb-1">Kursus Persiapan Tes</label>
+                <select id="test_preparation_course" name="test_preparation_course" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm">
+                    <option value="0">None</option>
+                    <option value="1">Completed</option>
+                </select>
+            </div>
+            
+            <!-- Tombol Submit -->
+            <div>
+                <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
+                    Prediksi Sekarang
+                </button>
+            </div>
+        </form>
+
+        <!-- Hasil Prediksi -->
+        {% if prediction_text %}
+        <div id="result" class="mt-8 text-center p-4 rounded-md 
+            {% if 'LULUS' in prediction_text %} bg-green-100 text-green-800 
+            {% elif 'TIDAK' in prediction_text %} bg-red-100 text-red-800
+            {% else %} bg-gray-100 text-gray-800 {% endif %}">
+            <p class="text-lg font-semibold">{{ prediction_text }}</p>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>
