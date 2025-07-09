@@ -1,58 +1,56 @@
-from flask import Flask, request, render_template
-import pandas as pd
-import joblib
 import os
+import joblib
 import numpy as np
+from flask import Flask, request, render_template
 
 # Inisialisasi aplikasi Flask
 app = Flask(__name__)
 
-# Variabel global untuk menyimpan model, encoders, dan status kesalahan
-model = None
-encoders = None
-error_message = None
+# --- Fungsi untuk Memuat Model dan Encoders ---
+def load_artifacts(model_path='model.pkl', encoders_path='encoders.pkl'):
+    """
+    Memuat model dan encoders dari file.
+    Mengembalikan tuple (model, encoders, error_message).
+    """
+    try:
+        # Periksa keberadaan file
+        if not os.path.exists(model_path) or not os.path.exists(encoders_path):
+            return None, None, "KESALAHAN: `model.pkl` atau `encoders.pkl` tidak ditemukan."
 
-# --- HANYA MEMUAT MODEL DAN ENCODERS ---
-# Tidak ada pelatihan di sini. Aplikasi ini hanya untuk inferensi/prediksi.
-try:
-    print("Mencoba memuat model.pkl dan encoders.pkl...")
-    
-    # Pastikan file-file ini berada di direktori yang sama dengan app.py
-    model_path = 'model.pkl'
-    encoders_path = 'encoders.pkl'
+        # Muat file
+        model = joblib.load(model_path)
+        encoders = joblib.load(encoders_path)
+        
+       
+        if not isinstance(encoders, dict):
+            return None, None, "KESALAHAN: File `encoders.pkl` tidak valid, seharusnya berisi dictionary."
 
-    if not os.path.exists(model_path) or not os.path.exists(encoders_path):
-        raise FileNotFoundError()
+        print("Model dan encoders berhasil dimuat.")
+        return model, encoders, None
 
-    model = joblib.load(model_path)
-    encoders = joblib.load(encoders_path)
-    
-    # Verifikasi bahwa encoders yang dimuat adalah dictionary
-    if not isinstance(encoders, dict):
-        raise TypeError("File 'encoders.pkl' tidak valid. Seharusnya berisi dictionary.")
+    except Exception as e:
+        error_msg = f"Terjadi kesalahan fatal saat memuat file: {e}"
+        print(error_msg)
+        return None, None, error_msg
 
-    print("Model dan encoders berhasil dimuat.")
-
-except FileNotFoundError:
-    error_message = ("KESALAHAN: File `model.pkl` atau `encoders.pkl` tidak ditemukan. "
-                     "Harap letakkan kedua file tersebut dari Google Colab Anda di direktori yang sama dengan file `app.py` ini.")
-    print(error_message)
-except Exception as e:
-    error_message = f"Terjadi kesalahan saat memuat model: {e}"
-    print(error_message)
+# Memuat artifak saat aplikasi pertama kali dimulai
+model, encoders, initial_error = load_artifacts()
 
 
-# --- Rute Aplikasi ---
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    # Jika ada error saat memuat model, tampilkan pesan error saja
-    if error_message:
-        return render_template('index.html', prediction_text=error_message, is_error=True)
+    """Menangani logika untuk halaman utama, input form, dan prediksi."""
+    
+    # Jika terjadi error saat memuat model, tampilkan pesan error
+    if initial_error:
+        return render_template('index.html', prediction_text=initial_error, is_error=True)
 
     prediction_text = ""
+    is_error = False
+    
     if request.method == 'POST':
         try:
-            # Mengambil data teks dari form
+            
             form_data = {
                 'gender': request.form['gender'],
                 'race/ethnicity': request.form['race_ethnicity'],
@@ -60,39 +58,46 @@ def index():
                 'test preparation course': request.form['test_preparation_course']
             }
 
-            # Mengubah input teks menjadi angka menggunakan encoders yang tersimpan
+            
             encoded_input = []
-            for col, value in form_data.items():
+           
+            feature_order = ['gender', 'race/ethnicity', 'lunch', 'test preparation course']
+            
+            for col in feature_order:
+                value = form_data[col]
+               
                 le = encoders[col]
                 encoded_value = le.transform([value])[0]
                 encoded_input.append(encoded_value)
             
             final_input = np.array(encoded_input).reshape(1, -1)
 
-            # Melakukan prediksi
+           
             prediction = model.predict(final_input)
             prediction_proba = model.predict_proba(final_input)
 
-            # Menyiapkan teks hasil prediksi
+           
             pass_probability = prediction_proba[0][1] * 100
-            if prediction[0] == 1:
-                result = "LULUS"
-            else:
-                result = "TIDAK LULUS"
-            
+            result = "LULUS" if prediction[0] == 1 else "TIDAK LULUS"
             prediction_text = f"Hasil Prediksi: {result} (Peluang Lulus: {pass_probability:.2f}%)"
 
-        except Exception as e:
-            if isinstance(e, ValueError) and 'y contains new labels' in str(e):
-                 prediction_text = "Terjadi kesalahan: Salah satu nilai input tidak ada dalam data pelatihan."
+        except KeyError as e:
+            is_error = True
+            prediction_text = f"KESALAHAN: Input '{e}' tidak ditemukan atau salah. Periksa kembali form HTML Anda."
+        except ValueError as e:
+            is_error = True
+            if 'contains new labels' in str(e):
+                prediction_text = "KESALAHAN: Nilai yang Anda masukkan tidak valid (tidak ada dalam data pelatihan)."
             else:
-                prediction_text = f"Terjadi kesalahan saat prediksi: {e}"
+                prediction_text = f"KESALAHAN pada nilai input: {e}"
+        except Exception as e:
+            is_error = True
+            prediction_text = f"Terjadi kesalahan saat melakukan prediksi: {e}"
 
-    # Render halaman HTML
-    return render_template('index.html', prediction_text=prediction_text)
+   
+    return render_template('index.html', prediction_text=prediction_text, is_error=is_error)
 
-# Menjalankan aplikasi
+
 if __name__ == '__main__':
-    if not os.path.exists('templates'):
-        os.makedirs('templates')
+
     app.run(debug=True, port=5000)
